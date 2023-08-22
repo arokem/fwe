@@ -1,0 +1,28 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fwe"
+description = "Free water elimination for diffusion MRI"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { file="LICENSE" }
+authors = [
+  { name="Ariel Rokem", email="arokem@gmail.com",
+    name="Pierre Nedelec", email="pierre.edelec@ucsf.edu" },
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+]
+dependencies = ["dipy"]
+dynamic = ["version"]
+
+[project.urls]
+"Homepage" = "https://github.com/your/package"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "project_name/_version.py"

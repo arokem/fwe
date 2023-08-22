@@ -9,8 +9,8 @@ readme = "README.md"
 requires-python = ">=3.8"
 license = { file="LICENSE" }
 authors = [
-  { name="Ariel Rokem", email="arokem@gmail.com",
-    name="Pierre Nedelec", email="pierre.edelec@ucsf.edu" },
+  {name="Ariel Rokem", email="arokem@gmail.com" },
+  {name="Pierre Nedelec", email="pierre.nedelec@ucsf.edu" },
 ]
 classifiers = [
   "Programming Language :: Python :: 3",
@@ -25,4 +25,4 @@ dynamic = ["version"]
 source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
-version-file = "project_name/_version.py"
+version-file = "fwe/_version.py"

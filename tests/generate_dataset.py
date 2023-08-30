@@ -27,7 +27,12 @@ def to_bids_description(
 
 
 def create_dummy_data(
-    dir: Path, subject: str, session: str = None, shape=(100, 100, 100), ndirs: int = 8
+    dir: Path,
+    subject: str,
+    session: str = None,
+    shape=(100, 100, 100),
+    ndirs: int = 8,
+    simulate_kwargs=None,
 ):
     """Create dummy dwi data for a given subject and session
 
@@ -43,6 +48,16 @@ def create_dummy_data(
         3d shape of image, by default (100, 100, 100)
     ndirs : int, optional
         number of diffusion directions, by default 8
+    simulate_kwargs : dict, optional
+        kwargs for multitensor.simulate, by default None
+
+    Example
+    -------
+    >>> n_sessions = 2
+    >>> n_subjects = 3
+    >>> bids_path = "/tmp/data"
+    >>> create_dummy_bids_dataset(bids_path, n_subjects, n_sessions)
+    >>> layout = BIDSLayout(bids_path, derivatives=True)
     """
     dir = Path(dir)
     aff = np.eye(4)
@@ -64,6 +79,7 @@ def create_dummy_data(
         n_dirs=ndirs,
         bvals=[1000],
         plot=False,
+        **simulate_kwargs,
     )
     bvecs = gtab.bvecs
     bvals = gtab.bvals
@@ -89,11 +105,11 @@ def create_dummy_data(
     nib.save(nib.Nifti1Image(data_brain_mask, aff), brain_mask_file)
 
     # Save tissue segmentation
-    tissue_seg_file = data_dir / "anat" / f"{sub_ses}_space-XX_dseg.nii.gz"
+    tissue_seg_file = data_dir / "anat" / f"{sub_ses}_dseg.nii.gz"
     nib.save(nib.Nifti1Image(data_tissue_seg, aff), tissue_seg_file)
 
 
-def create_dummy_bids_path(path, n_subjects, n_sessions):
+def create_dummy_bids_dataset(path, n_subjects, n_sessions, kwargs=None):
     path.mkdir(parents=True, exist_ok=True)
     subjects = ["sub-0%s" % (d + 1) for d in range(n_subjects)]
     sessions = ["ses-0%s" % (d + 1) for d in range(n_sessions)]
@@ -101,7 +117,6 @@ def create_dummy_bids_path(path, n_subjects, n_sessions):
         path, **{"Name": "Dummy", "Subjects": subjects, "Sessions": sessions}
     )
     pipeline_description = {"Name": "Dummy", "GeneratedBy": [{"Name": "synthetic"}]}
-
     deriv_dir = path / "derivatives/synthetic"
     deriv_dir.mkdir(parents=True, exist_ok=True)
     to_bids_description(deriv_dir, **pipeline_description)
@@ -112,15 +127,7 @@ def create_dummy_bids_path(path, n_subjects, n_sessions):
                 (deriv_dir / subject / session / modality).mkdir(
                     parents=True, exist_ok=True
                 )
-                (path / subject / session / modality).mkdir(exist_ok=True)
+                (path / subject / session / modality).mkdir(parents=True, exist_ok=True)
             # Make some dummy data:
-            create_dummy_data(deriv_dir, subject, session)
-            create_dummy_data(path, subject, session)
-
-
-n_sessions = 2
-n_subjects = 3
-bids_path_gb = Path("./gb")
-create_dummy_bids_path(bids_path_gb, n_subjects, n_sessions)
-layout_gb = BIDSLayout(bids_path_gb, derivatives=True)
-get_gb = layout_gb.get(scope="synthetic")
+            create_dummy_data(deriv_dir, subject, session, simulate_kwargs=kwargs)
+            # create_dummy_data(path, subject, session)

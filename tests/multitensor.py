@@ -5,16 +5,19 @@ from dipy.core.sphere import disperse_charges, HemiSphere
 from dipy.core.gradients import gradient_table
 from dipy.data import get_sphere
 from dipy.sims.voxel import multi_tensor, multi_tensor_odf
-from dipy.viz import window, actor
 
 
-def simulate(dseg, n_dirs=64, bvals=[1000, 2500], plot=False):
+def simulate(
+    dseg, n_dirs=64, bvals=[1000, 2500], wm_tensor=[0.0015, 0.0003, 0.0003], plot=False
+):
     """Generate simulation dwi data with free water in white matter, size of dseg
 
     Args:
         dseg (np.array,): tissue segmentation file
         n_dirs (int, optional): number of directions. Defaults to 64.
         bvals (list, optional): b values. Defaults to [1000, 2500].
+        wm_tensor (list, optional): white matter tensor.
+            Defaults to [0.0015, 0.0003, 0.0003].
         plot (bool, optional): whether to plot the signal. Defaults to False.
 
     Returns:
@@ -74,7 +77,7 @@ def simulate(dseg, n_dirs=64, bvals=[1000, 2500], plot=False):
             "type": "WM",
             "mevals": np.array(
                 [
-                    [0.0015, 0.0003, 0.0003],  # TODO: we can even add more tensors here
+                    wm_tensor,  # TODO: we can even add more tensors here
                     [0.0003, 0.0003, 0.0003],
                 ]
             ),

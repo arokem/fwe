@@ -15,7 +15,7 @@ authors = [
 classifiers = [
   "Programming Language :: Python :: 3",
 ]
-dependencies = ["dipy"]
+dependencies = ["dipy", "pybids"]
 dynamic = ["version"]
 
 [project.urls]

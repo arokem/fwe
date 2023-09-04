@@ -48,13 +48,9 @@ from dipy.reconst.dti import (TensorFit, design_matrix, lower_triangular,
                               ols_fit_tensor, fractional_anisotropy,
                               mean_diffusivity)
 from dipy.core.onetime import auto_attr
-from matplotlib import pyplot as plt
-
 
 MAX_DIFFFUSIVITY = 5
 MIN_DIFFUSIVITY = 0.01
-
-from matplotlib import pyplot as plt
 
 def model_prediction(model_params, gtab, S0, Diso):
     evals = model_params[..., :3]
@@ -74,6 +70,25 @@ def model_prediction(model_params, gtab, S0, Diso):
     Swater = (1 - fraction) * np.exp(np.einsum('...j,ij->...i', lower_water, H))
     mask = _positive_evals(evals[..., 0], evals[..., 1], evals[..., 2])
     return (Stissue + Swater) * mask[..., None]
+
+def fw_model_prediction(model_params, gtab, S0, Diso):
+    evals = model_params[..., :3]
+    evecs = model_params[..., 3:12].reshape(model_params.shape[:-1] + (3, 3))
+    fraction = model_params[..., 12][..., None]
+    qform = vec_val_vect(evecs, evals)
+    lower_tissue = lower_triangular(qform, S0)
+    lower_water = np.copy(lower_tissue)
+    lower_water[..., 0] = Diso
+    lower_water[..., 1] = 0
+    lower_water[..., 2] = Diso
+    lower_water[..., 3] = 0
+    lower_water[..., 4] = 0
+    lower_water[..., 5] = Diso
+    H = design_matrix(gtab)
+    # Stissue = fraction * np.exp(np.einsum('...j,ij->...i', lower_tissue, H))
+    Swater = (1 - fraction) * np.exp(np.einsum('...j,ij->...i', lower_water, H))
+    mask = _positive_evals(evals[..., 0], evals[..., 1], evals[..., 2])
+    return (Swater) * mask[..., None]
 
 
 class Manifold():
@@ -619,11 +634,6 @@ def gradient_descent(design_matrix, initial_guess, attenuations, fmin, fmax,
         cost[i] = np.mean(manifold.flat_cost)
         # print(manifold.flat_cost[1000])
 
-    # Return the estimated parameters
-    plt.figure('Cost')
-    plt.plot(cost, '.')
-    plt.xlabel('iterations')
-    plt.ylabel('Total Cost')
     return manifold.parameters
 
 

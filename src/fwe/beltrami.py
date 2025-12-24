@@ -58,11 +58,12 @@ from dipy.reconst.vec_val_sum import vec_val_vect
 MAX_DIFFUSIVITY = 0.005
 MIN_DIFFUSIVITY = 0.00001
 MIN_FRAC = 0.0001
+WATER_DIFFUSIVITY = 0.003  # s/mm^2
 
 __all__ = ["BeltramiModel", "BeltramiFit"]
 
 
-def model_prediction(model_params, gtab, S0, Diso=0.003):
+def model_prediction(model_params, gtab, S0, Diso=WATER_DIFFUSIVITY):
     """
     Predict dMRI signal based on fwdti model parameters.
 
@@ -116,7 +117,7 @@ class _BeltramiOptimizer:
         attenuations,
         fmin,
         fmax,
-        Diso=0.003,
+        Diso=WATER_DIFFUSIVITY,
         beta=1,
         mask=None,
         zooms=None,
@@ -417,7 +418,7 @@ class BeltramiModel(ReconstModel):
         self.fit_kwargs = {k: kwargs[k] for k in fit_keys if k in kwargs}
 
     def predict(self, model_params, S0=1):
-        Diso = self.init_kwargs.get("Diso", 0.003)
+        Diso = self.init_kwargs.get("Diso", WATER_DIFFUSIVITY)
         return model_prediction(model_params, self.gtab, S0, Diso)
 
     def fit(self, data, mask=None):
@@ -441,7 +442,7 @@ class BeltramiModel(ReconstModel):
 
         # Initializing tissue tensor
         init_params = np.zeros(data.shape[:-1] + (13,))
-        Diso = self.init_kwargs.get("Diso", 0.003)
+        Diso = self.init_kwargs.get("Diso", WATER_DIFFUSIVITY)
         min_tissue_diff = self.init_kwargs.get("min_tissue_diff", MIN_DIFFUSIVITY)
         max_tissue_diff = self.init_kwargs.get("max_tissue_diff", MAX_DIFFUSIVITY)
         init_params[mask, 0:12] = tensor_init(
@@ -508,7 +509,7 @@ class BeltramiFit(TensorFit):
         return mean_diffusivity(self.initial_guess[..., 0:3])
 
     def predict(self, gtab, S0=1):
-        Diso = self.model.fit_kwargs.get("Diso", 0.003)
+        Diso = self.model.fit_kwargs.get("Diso", WATER_DIFFUSIVITY)
         return model_prediction(self.model_params, gtab, S0, Diso)
 
 
@@ -542,11 +543,11 @@ def get_attenuations(signal, gtab):
 def fraction_init_s0(
     signal,
     gtab,
-    Diso=0.003,
+    Diso=WATER_DIFFUSIVITY,
     Stissue=None,
     Swater=None,
-    min_tissue_diff=0.001,
-    max_tissue_diff=0.0025,
+    min_tissue_diff=MIN_DIFFUSIVITY,
+    max_tissue_diff=MAX_DIFFUSIVITY,
 ):
     S0 = np.mean(signal[..., gtab.b0s_mask], axis=-1)
     if Stissue is None or Swater is None:
@@ -588,7 +589,9 @@ def fraction_init_s0(
     return (f0, fmin, fmax)
 
 
-def fraction_init_md(signal, gtab, Diso=0.003, tissue_MD=0.006):
+def fraction_init_md(
+    signal, gtab, Diso=WATER_DIFFUSIVITY, tissue_MD=WATER_DIFFUSIVITY / 20
+):
     # bvals = gtab.bvals[~gtab.b0s_mask]
     bvals = gtab.bvals
     bvecs = gtab.bvecs
@@ -611,8 +614,8 @@ def fraction_init_md(signal, gtab, Diso=0.003, tissue_MD=0.006):
     f0 = (np.exp(-mean_bval * MD) - Awater) / (Atissue - Awater)
 
     # Min and Max volume fractions
-    fmin = np.ones(f0.shape) * 0.0001
-    fmax = np.ones(f0.shape) * (1 - 0.0001)
+    fmin = np.ones(f0.shape) * MIN_FRAC
+    fmax = np.ones(f0.shape) * (1 - MIN_FRAC)
 
     return (f0, fmin, fmax)
 
@@ -620,12 +623,12 @@ def fraction_init_md(signal, gtab, Diso=0.003, tissue_MD=0.006):
 def fraction_init_hybrid(
     signal,
     gtab,
-    Diso=0.003,
+    Diso=WATER_DIFFUSIVITY,
     Stissue=None,
     Swater=None,
-    min_tissue_diff=0.001,
-    max_tissue_diff=0.0025,
-    tissue_MD=0.6,
+    min_tissue_diff=MIN_DIFFUSIVITY,
+    max_tissue_diff=MAX_DIFFUSIVITY,
+    tissue_MD=WATER_DIFFUSIVITY / 20,
 ):
     f_S0, fmin, fmax = fraction_init_s0(
         signal,
@@ -639,9 +642,9 @@ def fraction_init_hybrid(
     f_MD, _, _ = fraction_init_md(signal, gtab, Diso=Diso, tissue_MD=tissue_MD)
     # hybrid initialization
     alpha = np.copy(f_S0)
-    np.clip(alpha, 0.0001, 0.9999, out=alpha)
+    np.clip(alpha, MIN_FRAC, 1 - MIN_FRAC, out=alpha)
     np.clip(f_S0, fmin, fmax, out=f_S0)
-    np.clip(f_MD, 0.0001, 0.9999, out=f_MD)
+    np.clip(f_MD, MIN_FRAC, 1 - MIN_FRAC, out=f_MD)
     f0 = (f_MD**alpha) * (f_S0 ** (1 - alpha))
     # f0 = (f_S0**(f_MD)) * f_MD**(1 - f_MD)
 
@@ -649,7 +652,12 @@ def fraction_init_hybrid(
 
 
 def tensor_init(
-    signal, gtab, fraction, Diso=0.003, min_tissue_diff=0.001, max_tissue_diff=2.5
+    signal,
+    gtab,
+    fraction,
+    Diso=WATER_DIFFUSIVITY,
+    min_tissue_diff=MIN_DIFFUSIVITY,
+    max_tissue_diff=MAX_DIFFUSIVITY,
 ):
     Ak, this_gtab = get_attenuations(signal, gtab)
 
@@ -667,7 +675,7 @@ def tensor_init(
     Awater = np.tile(Awater, Ak.shape[:-1] + (1,))
     Atissue = (Ak - (1 - f) * Awater) / f
     # np.clip(Atissue, Atissue_min, Atissue_max, out=Atissue)
-    np.clip(Atissue, 0.0001, 0.9999, out=Atissue)
+    np.clip(Atissue, MIN_FRAC, 1 - MIN_FRAC, out=Atissue)
 
     # applying standard DTI to corrected signal
     dti_params = ols_fit_tensor(design_matrix(this_gtab), Atissue)[0]
@@ -686,7 +694,7 @@ def gradient_descent(
     learning_rate=0.01,
     metric_ratio=1,
     reg_weight=1,
-    Diso=0.003,
+    Diso=WATER_DIFFUSIVITY,
     zooms=None,
 ):
     # cropping the non zero information from the data

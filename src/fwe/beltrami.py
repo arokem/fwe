@@ -55,14 +55,14 @@ from dipy.reconst.dti import (
 )
 from dipy.reconst.vec_val_sum import vec_val_vect
 
-MAX_DIFFUSIVITY = 5
-MIN_DIFFUSIVITY = 0.01
+MAX_DIFFUSIVITY = 0.005
+MIN_DIFFUSIVITY = 0.00001
 MIN_FRAC = 0.0001
 
 __all__ = ["BeltramiModel", "BeltramiFit"]
 
 
-def model_prediction(model_params, gtab, S0, Diso=3):
+def model_prediction(model_params, gtab, S0, Diso=0.003):
     """
     Predict dMRI signal based on fwdti model parameters.
 
@@ -116,7 +116,7 @@ class _BeltramiOptimizer:
         attenuations,
         fmin,
         fmax,
-        Diso=3,
+        Diso=0.003,
         beta=1,
         mask=None,
         zooms=None,
@@ -417,7 +417,7 @@ class BeltramiModel(ReconstModel):
         self.fit_kwargs = {k: kwargs[k] for k in fit_keys if k in kwargs}
 
     def predict(self, model_params, S0=1):
-        Diso = self.init_kwargs.get("Diso", 3)
+        Diso = self.init_kwargs.get("Diso", 0.003)
         return model_prediction(model_params, self.gtab, S0, Diso)
 
     def fit(self, data, mask=None):
@@ -441,7 +441,7 @@ class BeltramiModel(ReconstModel):
 
         # Initializing tissue tensor
         init_params = np.zeros(data.shape[:-1] + (13,))
-        Diso = self.init_kwargs.get("Diso", 3)
+        Diso = self.init_kwargs.get("Diso", 0.003)
         min_tissue_diff = self.init_kwargs.get("min_tissue_diff", MIN_DIFFUSIVITY)
         max_tissue_diff = self.init_kwargs.get("max_tissue_diff", MAX_DIFFUSIVITY)
         init_params[mask, 0:12] = tensor_init(
@@ -649,7 +649,7 @@ def fraction_init_hybrid(
 
 
 def tensor_init(
-    signal, gtab, fraction, Diso=3, min_tissue_diff=0.001, max_tissue_diff=2.5
+    signal, gtab, fraction, Diso=0.003, min_tissue_diff=0.001, max_tissue_diff=2.5
 ):
     Ak, this_gtab = get_attenuations(signal, gtab)
 
@@ -686,7 +686,7 @@ def gradient_descent(
     learning_rate=0.01,
     metric_ratio=1,
     reg_weight=1,
-    Diso=3,
+    Diso=0.003,
     zooms=None,
 ):
     # cropping the non zero information from the data

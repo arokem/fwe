@@ -5,6 +5,19 @@
 Implements free water elimination (FWE) models for preprocessing diffusion MRI data.
 
 This code was used in the paper: ["Free water elimination tractometry for aging brains"](https://direct.mit.edu/imag/article/doi/10.1162/IMAG.a.991/133658/Free-water-elimination-tractometry-for-aging)
+```
+@article{10.1162/IMAG.a.991,
+    author = {Chang, Kelly and Burke, Luke and LaPiana, Nina and Howlett, Bradley and Hunt, David and Dezelar, Margaret and Andre, Jalal B. and Curl, Patti and Ralston, James D. and Rokem, Ariel and Mac Donald, Christine L.},
+    title = {Free water elimination tractometry for aging brains},
+    journal = {Imaging Neuroscience},
+    volume = {3},
+    pages = {IMAG.a.991},
+    year = {2025},
+    month = {11},
+    url = {https://doi.org/10.1162/IMAG.a.991}
+}
+
+```
 
 ---
 

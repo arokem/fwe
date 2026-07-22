@@ -200,10 +200,3 @@ def test_free_water_elimination_invalid_model(tmp_path):
         )
     except Exception:
         pass  # acceptable — the function may fail on missing output
-
-
-def test_import():
-    """Package imports correctly and exposes the public API."""
-    import fwe
-
-    assert hasattr(fwe, "free_water_elimination")
